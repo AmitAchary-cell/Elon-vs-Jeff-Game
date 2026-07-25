@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bezos vs Musk: Cyber Dash</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            user-select: none;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #0b051b;
+            color: #fff;
+            touch-action: none; 
+        }
+
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        /* Modern UI Overlay */
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+        }
+
+        .hud-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .score-card {
+            background: rgba(18, 10, 38, 0.65);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(0, 243, 255, 0.3);
+            border-radius: 16px;
+            padding: 10px 15px;
+            box-shadow: 0 8px 32px 0 rgba(0, 243, 255, 0.2);
+        }
+
+        .score-title {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #00f3ff;
+            margin-bottom: 2px;
+        }
+
+        .score-value {
+            font-size: 24px;
+            font-weight: 800;
+            text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+            color: #ffffff;
+        }
+
+        .coins-value {
+            color: #ff9900;
+            text-shadow: 0 0 10px rgba(255, 153, 0, 0.5);
+        }
+
+        /* Screen Overlays */
+        .overlay-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(11, 5, 27, 0.85);
+            backdrop-filter: blur(16px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            pointer-events: auto;
+            z-index: 20;
+            transition: opacity 0.4s ease;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .hidden {
+            opacity: 0;
+            pointer-events: none !important;
+        }
+
+        h1.game-title {
+            font-size: clamp(32px, 8vw, 56px);
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            background: linear-gradient(135deg, #ff9900, #00f3ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+            text-shadow: 0 0 30px rgba(255, 153, 0, 0.4);
+        }
+
+        /* Fix for the Game Over Screen Rectangle bug */
+        h1.gameover-title {
+            background: linear-gradient(135deg, #ff0055, #ff9900);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p.subtitle {
+            font-size: clamp(14px, 4vw, 18px);
+            color: #a29bfe;
+            margin-bottom: 30px;
+            max-width: 500px;
+            line-height: 1.5;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #ff9900, #ff007f);
+            color: white;
+            border: none;
+            padding: 16px 40px;
+            font-size: 18px;
+            font-weight: 700;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 0 25px rgba(255, 153, 0, 0.6);
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .btn:hover {
+            transform: scale(1.08);
+            box-shadow: 0 0 35px rgba(255, 153, 0, 0.9);
+        }
+
+        .controls-guide {
+            margin-top: 30px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .key-box {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 8px 14px;
+            font-size: 13px;
+            color: #00f3ff;
+        }
+
+        .key-box span {
+            display: block;
+            font-weight: bold;
+            font-size: 14px;
+            color: #fff;
+        }
+        
+        .mobile-instruction {
+            width: 100%;
+            margin-top: 15px;
+            color: #ff007f;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        /* Elon Dialogue Banner */
+        #elon-banner {
+            position: absolute;
+            top: 15%;
+            left: 50%;
+            transform: translateX(-50%) translateY(-20px);
+            background: rgba(255, 0, 127, 0.9);
+            border: 2px solid #00f3ff;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 30px;
+            font-weight: 800;
+            font-size: clamp(12px, 4vw, 20px);
+            letter-spacing: 1px;
+            box-shadow: 0 0 30px rgba(255, 0, 127, 0.8);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
+            z-index: 15;
+            text-transform: uppercase;
+            text-align: center;
+            width: 90%;
+            max-width: 600px;
+        }
+
+        #elon-banner.active {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+
+    <div id="elon-banner">⚡ ELON: "YOUR PRIME SUBSCRIPTION IS INVALID HERE!" ⚡</div>
+
+    <div id="ui-layer">
+        <div class="hud-top">
+            <div class="score-card">
+                <div class="score-title">Distance</div>
+                <div class="score-value" id="score-val">0m</div>
+            </div>
+            <div class="score-card">
+                <div class="score-title">Packages</div>
+                <div class="score-value coins-value" id="coins-val">0</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Start Screen -->
+    <div id="start-screen" class="overlay-screen">
+        <h1 class="game-title">BEZOS VS MUSK:<br>CYBER DASH</h1>
+        <p class="subtitle">Play as Jeff Bezos running backwards! Jam to Bo Burnham's Bezos I & II, dodge obstacles, and watch out for Elon Musk blocking the road with his X-Javelin!</p>
+        <button class="btn" id="start-btn">PLAY NOW</button>
+
+        <div class="controls-guide">
+            <div class="key-box"><span>A / ◀</span> Left</div>
+            <div class="key-box"><span>D / ▶</span> Right</div>
+            <div class="key-box"><span>W / ▲</span> Jump</div>
+            <div class="key-box"><span>S / ▼</span> Slide</div>
+            <div class="mobile-instruction">📱 Mobile: Swipe Left, Right, Up, or Down</div>
+        </div>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="gameover-screen" class="overlay-screen hidden">
+        <h1 class="game-title gameover-title">BLOCKED!</h1>
+        <p class="subtitle" id="gameover-reason">Elon stopped your delivery.</p>
+        <div class="score-card" style="margin-bottom: 25px; min-width: 200px; text-align: center;">
+            <div class="score-title">Final Distance</div>
+            <div class="score-value" id="final-score">0m</div>
+        </div>
+        <button class="btn" id="restart-btn">DELIVER AGAIN</button>
+    </div>
+
+    <!-- Include Three.js via CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <script>
+        // --- AUDIO SYNTHESIZER & MUSIC ---
+        class SoundFX {
+            constructor() { this.ctx = null; }
+            init() { if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+            playJump() {
+                if (!this.ctx) return;
+                let osc = this.ctx.createOscillator();
+                let gain = this.ctx.createGain();
+                osc.type = 'sine'; osc.frequency.setValueAtTime(180, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(480, this.ctx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(); osc.stop(this.ctx.currentTime + 0.15);
+            }
+            playCoin() {
+                if (!this.ctx) return;
+                let osc = this.ctx.createOscillator();
+                let gain = this.ctx.createGain();
+                osc.type = 'triangle'; osc.frequency.setValueAtTime(600, this.ctx.currentTime);
+                osc.frequency.setValueAtTime(900, this.ctx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(); osc.stop(this.ctx.currentTime + 0.2);
+            }
+            playJavelin() {
+                if (!this.ctx) return;
+                let osc = this.ctx.createOscillator();
+                let gain = this.ctx.createGain();
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(100, this.ctx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(); osc.stop(this.ctx.currentTime + 0.3);
+            }
+            playHit() {
+                if (!this.ctx) return;
+                let osc = this.ctx.createOscillator();
+                let gain = this.ctx.createGain();
+                osc.type = 'square'; osc.frequency.setValueAtTime(120, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(30, this.ctx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(); osc.stop(this.ctx.currentTime + 0.3);
+            }
+        }
+        const sfx = new SoundFX();
+
+        // Bo Burnham - Bezos I & II Streaming
+        const musicBezos1 = new Audio('https://archive.org/download/inside-the-songs/07%20Bezos%20I.mp3');
+        const musicBezos2 = new Audio('https://archive.org/download/inside-the-songs/13%20Bezos%20II.mp3');
+        musicBezos1.volume = 0.5; musicBezos2.volume = 0.5;
+
+        // Loop the two songs together
+        musicBezos1.addEventListener('ended', () => { if(isPlaying) musicBezos2.play(); });
+        musicBezos2.addEventListener('ended', () => { if(isPlaying) musicBezos1.play(); });
+
+        // --- GAME ENGINE SETUP ---
+        const LANE_WIDTH = 3.2;
+        const LANES = [-LANE_WIDTH, 0, LANE_WIDTH];
+
+        let scene, camera, renderer;
+        let playerGroup, hitbox;
+        let roadSegments = [], obstacles = [], gems = [];
+        let elonEncounter = null;
+
+        let isPlaying = false;
+        let currentLane = 1, targetX = 0;
+        let isJumping = false, jumpVelocity = 0;
+        let isSliding = false, slideTimer = 0;
+        let gameSpeed = 0.6, distance = 0, gemsCollected = 0;
+        let nextObstacleZ = -40, nextElonDistance = 120;
+
+        const COLOR_SKY = 0x0c061a, COLOR_ROAD = 0x160d2b;
+        const COLOR_CYAN = 0x00f3ff, COLOR_PINK = 0xff007f;
+        const SKIN_TONE = 0xffdcb3;
+
+        // --- LOAD REALISTIC FACES (USING DIRECT STATIC URLs TO BYPASS REDIRECT CORS ISSUES) ---
+        const textureLoader = new THREE.TextureLoader();
+        textureLoader.setCrossOrigin('anonymous');
+        
+        const bezosStaticURL = 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6c/Jeff_Bezos_at_Amazon_Spheres_Grand_Opening_in_Seattle_-_2018_%2839074799225%29_%28cropped%29.jpg/256px-Jeff_Bezos_at_Amazon_Spheres_Grand_Opening_in_Seattle_-_2018_%2839074799225%29_%28cropped%29.jpg';
+        const muskStaticURL = 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/34/Elon_Musk_Royal_Society_%28crop2%29.jpg/256px-Elon_Musk_Royal_Society_%28crop2%29.jpg';
+
+        const bezosTex = textureLoader.load(bezosStaticURL);
+        const muskTex = textureLoader.load(muskStaticURL);
+        
+        bezosTex.encoding = THREE.sRGBEncoding;
+        muskTex.encoding = THREE.sRGBEncoding;
+
+        // --- LOGO GENERATOR ---
+        function createLogoSprite(type, scaleAmount) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256; canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, 256, 256);
+
+            if (type === 'amazon') {
+                ctx.font = 'bold 50px Arial, sans-serif';
+                ctx.fillStyle = '#ffffff';
+                ctx.textAlign = 'center';
+                ctx.fillText('amazon', 128, 120);
+                ctx.beginPath(); ctx.arc(128, 100, 70, 0.25 * Math.PI, 0.75 * Math.PI);
+                ctx.lineWidth = 10; ctx.strokeStyle = '#FF9900'; ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(185, 145); ctx.lineTo(195, 165); ctx.lineTo(170, 160);
+                ctx.fillStyle = '#FF9900'; ctx.fill();
+            } else if (type === 'x') {
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath(); ctx.moveTo(70, 50); ctx.lineTo(110, 50); ctx.lineTo(186, 206); ctx.lineTo(146, 206); ctx.fill();
+                ctx.beginPath(); ctx.moveTo(186, 50); ctx.lineTo(166, 50); ctx.lineTo(70, 206); ctx.lineTo(90, 206); ctx.fill();
+            }
+
+            const texture = new THREE.CanvasTexture(canvas);
+            const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
+            const sprite = new THREE.Sprite(material);
+            sprite.scale.set(scaleAmount, scaleAmount, 1);
+            return sprite;
+        }
+
+        // --- INITIALIZATION ---
+        function init() {
+            const container = document.getElementById('canvas-container');
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(COLOR_SKY);
+            scene.fog = new THREE.FogExp2(COLOR_SKY, 0.015);
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 200);
+            camera.position.set(0, 4.5, 8);
+            camera.rotation.x = -0.25;
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.outputEncoding = THREE.sRGBEncoding;
+            container.appendChild(renderer.domElement);
+
+            scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+            const dirLight = new THREE.DirectionalLight(COLOR_CYAN, 0.8);
+            dirLight.position.set(20, 40, 20);
+            dirLight.castShadow = true;
+            scene.add(dirLight);
+
+            createPlayer(); 
+            buildRoadEnvironment();
+            createBackgroundScenery();
+
+            window.addEventListener('resize', onWindowResize);
+            document.addEventListener('keydown', handleKeyDown);
+
+            document.getElementById('start-btn').addEventListener('click', () => { sfx.init(); startGame(); });
+            document.getElementById('restart-btn').addEventListener('click', () => { startGame(); });
+
+            renderer.render(scene, camera);
+        }
+
+        // --- PLAYER MESH (JEFF BEZOS FACING CAMERA) ---
+        function createPlayer() {
+            playerGroup = new THREE.Group();
+
+            const hitGeo = new THREE.BoxGeometry(0.8, 1.6, 0.8);
+            const hitMat = new THREE.MeshBasicMaterial({ visible: false });
+            hitbox = new THREE.Mesh(hitGeo, hitMat);
+            hitbox.position.y = 0.8;
+            playerGroup.add(hitbox);
+
+            const bodyGeo = new THREE.CylinderGeometry(0.4, 0.3, 1.1, 16);
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.position.y = 0.55;
+            body.castShadow = true;
+            playerGroup.add(body);
+
+            const headGeo = new THREE.BoxGeometry(0.7, 0.7, 0.7);
+            const skinMat = new THREE.MeshStandardMaterial({ color: SKIN_TONE, roughness: 0.4 });
+            const faceMat = new THREE.MeshStandardMaterial({ map: bezosTex, roughness: 0.4 });
+            
+            // Materials map: [Right, Left, Top, Bottom, Front(+Z), Back(-Z)]
+            // +Z is the side facing the camera!
+            const headMaterials = [skinMat, skinMat, skinMat, skinMat, faceMat, skinMat];
+            
+            const head = new THREE.Mesh(headGeo, headMaterials);
+            head.position.y = 1.45;
+            playerGroup.add(head);
+
+            const logo = createLogoSprite('amazon', 1.2);
+            logo.position.y = 2.4; 
+            playerGroup.add(logo);
+
+            scene.add(playerGroup);
+        }
+
+        // --- ENVIRONMENT ---
+        function buildRoadEnvironment() {
+            for (let i = 0; i < 10; i++) {
+                const seg = createRoadSegment();
+                seg.position.z = -i * 20;
+                roadSegments.push(seg);
+                scene.add(seg);
+            }
+        }
+
+        function createRoadSegment() {
+            const group = new THREE.Group();
+            const roadGeo = new THREE.PlaneGeometry(12, 20);
+            const roadMat = new THREE.MeshStandardMaterial({ color: COLOR_ROAD, roughness: 0.4 });
+            const road = new THREE.Mesh(roadGeo, roadMat);
+            road.rotation.x = -Math.PI / 2;
+            road.receiveShadow = true;
+            group.add(road);
+
+            const railGeo = new THREE.BoxGeometry(0.3, 0.4, 20);
+            const railMat = new THREE.MeshStandardMaterial({ color: COLOR_CYAN, emissive: COLOR_CYAN, emissiveIntensity: 0.6 });
+            const leftRail = new THREE.Mesh(railGeo, railMat); leftRail.position.set(-6, 0.2, 0); group.add(leftRail);
+            const rightRail = new THREE.Mesh(railGeo, railMat); rightRail.position.set(6, 0.2, 0); group.add(rightRail);
+
+            const lineGeo = new THREE.PlaneGeometry(0.1, 4);
+            const lineMat = new THREE.MeshBasicMaterial({ color: COLOR_PINK, transparent: true, opacity: 0.5 });
+            for (let z = -8; z <= 8; z += 8) {
+                const l1 = new THREE.Mesh(lineGeo, lineMat); l1.rotation.x = -Math.PI/2; l1.position.set(-1.6, 0.01, z); group.add(l1);
+                const l2 = new THREE.Mesh(lineGeo, lineMat); l2.rotation.x = -Math.PI/2; l2.position.set(1.6, 0.01, z); group.add(l2);
+            }
+            return group;
+        }
+
+        function createBackgroundScenery() {
+            for (let i = 0; i < 30; i++) {
+                const geo = new THREE.ConeGeometry(Math.random() * 4 + 2, Math.random() * 10 + 5, 4);
+                const mat = new THREE.MeshStandardMaterial({ color: 0x12082b, wireframe: true, emissive: i % 2 === 0 ? COLOR_PINK : COLOR_CYAN, emissiveIntensity: 0.2 });
+                const mesh = new THREE.Mesh(geo, mat);
+                mesh.position.set((Math.random() > 0.5 ? 1 : -1) * (Math.random() * 40 + 20), Math.random() * 10, -Math.random() * 200);
+                scene.add(mesh);
+            }
+        }
+
+        // --- NPC: ELON MUSK ---
+        function createElonMuskNPC() {
+            const elonGroup = new THREE.Group();
+
+            const bodyGeo = new THREE.BoxGeometry(1.0, 1.4, 0.7);
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.8, roughness: 0.3 });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.position.y = 0.7;
+            body.castShadow = true;
+            elonGroup.add(body);
+
+            const headGeo = new THREE.BoxGeometry(0.7, 0.7, 0.7);
+            const skinMat = new THREE.MeshStandardMaterial({ color: SKIN_TONE });
+            const faceMat = new THREE.MeshStandardMaterial({ map: muskTex, roughness: 0.4 });
+            const headMaterials = [skinMat, skinMat, skinMat, skinMat, faceMat, skinMat];
+            
+            const head = new THREE.Mesh(headGeo, headMaterials);
+            head.position.y = 1.75;
+            elonGroup.add(head);
+
+            const logo = createLogoSprite('x', 2.0);
+            logo.position.y = 2.8;
+            elonGroup.add(logo);
+
+            const javelinGroup = new THREE.Group();
+            const shaftGeo = new THREE.CylinderGeometry(0.08, 0.08, 11, 16);
+            const shaftMat = new THREE.MeshStandardMaterial({ color: COLOR_PINK, emissive: COLOR_PINK, emissiveIntensity: 1.0 });
+            const javelinMesh = new THREE.Mesh(shaftGeo, shaftMat);
+            javelinMesh.rotation.z = Math.PI / 2;
+            javelinMesh.position.x = -4.5; 
+            javelinGroup.add(javelinMesh);
+            javelinGroup.position.set(0, 1.0, 0.3); 
+            elonGroup.add(javelinGroup);
+
+            elonGroup.position.set(5.5, 0, -180);
+            scene.add(elonGroup);
+
+            return { group: elonGroup, javelin: javelinGroup, hasTriggered: false };
+        }
+
+        // --- OBSTACLES & GEMS ---
+        function spawnObstacle(zPos) {
+            const lane = Math.floor(Math.random() * 3);
+            const xPos = LANES[lane];
+            const type = Math.random();
+
+            if (type < 0.5) {
+                const geo = new THREE.BoxGeometry(2.6, 1.0, 0.8);
+                const mat = new THREE.MeshStandardMaterial({ color: COLOR_PINK, emissive: COLOR_PINK, emissiveIntensity: 0.5 });
+                const mesh = new THREE.Mesh(geo, mat);
+                mesh.position.set(xPos, 0.5, zPos);
+                scene.add(mesh);
+                obstacles.push({ mesh, type: 'jump', box: new THREE.Box3() });
+            } else {
+                const group = new THREE.Group();
+                const poleGeo = new THREE.CylinderGeometry(0.1, 0.1, 3);
+                const mat = new THREE.MeshStandardMaterial({ color: COLOR_CYAN, emissive: COLOR_CYAN });
+                const p1 = new THREE.Mesh(poleGeo, mat); p1.position.set(xPos - 1.2, 1.5, zPos);
+                const p2 = new THREE.Mesh(poleGeo, mat); p2.position.set(xPos + 1.2, 1.5, zPos);
+
+                const laserGeo = new THREE.BoxGeometry(2.4, 1.2, 0.2);
+                const laserMat = new THREE.MeshStandardMaterial({ color: COLOR_CYAN, emissive: COLOR_CYAN, emissiveIntensity: 0.8, transparent: true, opacity: 0.8 });
+                const laser = new THREE.Mesh(laserGeo, laserMat);
+                laser.position.set(xPos, 2.2, zPos);
+
+                group.add(p1, p2, laser);
+                scene.add(group);
+                obstacles.push({ mesh: group, type: 'slide', box: new THREE.Box3(), bounds: laser });
+            }
+
+            const gemLane = (lane + 1) % 3;
+            spawnGem(LANES[gemLane], zPos);
+        }
+
+        function spawnGem(xPos, zPos) {
+            const geo = new THREE.BoxGeometry(0.6, 0.4, 0.6);
+            const mat = new THREE.MeshStandardMaterial({ color: 0xcd853f, roughness: 0.9 });
+            const box = new THREE.Mesh(geo, mat);
+            
+            const tapeGeo = new THREE.BoxGeometry(0.62, 0.1, 0.62);
+            const tapeMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+            const tape = new THREE.Mesh(tapeGeo, tapeMat);
+            box.add(tape);
+
+            box.position.set(xPos, 0.8, zPos);
+            scene.add(box);
+            gems.push(box);
+        }
+
+        // --- KEYBOARD CONTROLS ---
+        function handleKeyDown(e) {
+            if (!isPlaying) return;
+
+            if ((e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') && currentLane > 0) {
+                currentLane--;
+            } else if ((e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') && currentLane < 2) {
+                currentLane++;
+            } else if ((e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.key === ' ') && !isJumping && !isSliding) {
+                isJumping = true; jumpVelocity = 0.22; sfx.playJump();
+            } else if ((e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') && !isSliding && !isJumping) {
+                isSliding = true; slideTimer = 30; playerGroup.scale.set(1, 0.4, 1);
+            }
+            targetX = LANES[currentLane];
+        }
+
+        // --- MOBILE TOUCH CONTROLS ---
+        let touchStartX = 0, touchStartY = 0;
+
+        document.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+        }, { passive: false });
+
+        document.addEventListener('touchend', (e) => {
+            if (!isPlaying) return;
+            
+            let dx = e.changedTouches[0].screenX - touchStartX;
+            let dy = e.changedTouches[0].screenY - touchStartY;
+            
+            if (Math.abs(dx) > Math.abs(dy)) {
+                if (Math.abs(dx) > 30) {
+                    if (dx > 0 && currentLane < 2) currentLane++; 
+                    else if (dx < 0 && currentLane > 0) currentLane--; 
+                }
+            } else {
+                if (Math.abs(dy) > 30) {
+                    if (dy < 0 && !isJumping && !isSliding) {
+                        isJumping = true; jumpVelocity = 0.22; sfx.playJump();
+                    } else if (dy > 0 && !isSliding && !isJumping) {
+                        isSliding = true; slideTimer = 30; playerGroup.scale.set(1, 0.4, 1);
+                    }
+                }
+            }
+            targetX = LANES[currentLane];
+        }, { passive: false });
+
+        // --- GAME LOOP ---
+        function startGame() {
+            isPlaying = true;
+            distance = 0; gemsCollected = 0;
+            gameSpeed = 0.65; currentLane = 1; targetX = 0;
+            playerGroup.position.set(0, 0, 0); playerGroup.scale.set(1, 1, 1);
+
+            obstacles.forEach(o => scene.remove(o.mesh));
+            gems.forEach(g => scene.remove(g));
+            if (elonEncounter) scene.remove(elonEncounter.group);
+            obstacles = []; gems = []; elonEncounter = null;
+            nextObstacleZ = -40; nextElonDistance = 120;
+
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('gameover-screen').classList.add('hidden');
+            document.getElementById('score-val').innerText = '0m';
+            document.getElementById('coins-val').innerText = '0';
+            
+            musicBezos1.currentTime = 0;
+            musicBezos2.currentTime = 0;
+            musicBezos1.play().catch(e => console.log('Audio autoplay blocked', e));
+        }
+
+        function triggerGameOver(reason) {
+            isPlaying = false;
+            sfx.playHit();
+            playerGroup.scale.set(1,1,1);
+            
+            musicBezos1.pause(); musicBezos2.pause();
+            
+            document.getElementById('gameover-reason').innerText = reason;
+            document.getElementById('final-score').innerText = Math.floor(distance) + 'm';
+            document.getElementById('gameover-screen').classList.remove('hidden');
+        }
+
+        function update() {
+            if (!isPlaying) return;
+
+            distance += gameSpeed * 0.5;
+            gameSpeed += 0.0001; 
+            document.getElementById('score-val').innerText = Math.floor(distance) + 'm';
+
+            playerGroup.position.x += (targetX - playerGroup.position.x) * 0.25;
+
+            if (isJumping) {
+                playerGroup.position.y += jumpVelocity;
+                jumpVelocity -= 0.012; 
+                if (playerGroup.position.y <= 0) { playerGroup.position.y = 0; isJumping = false; }
+            }
+
+            if (isSliding) {
+                slideTimer--;
+                if (slideTimer <= 0) {
+                    isSliding = false;
+                    playerGroup.scale.set(1, 1, 1);
+                }
+            }
+
+            roadSegments.forEach(seg => {
+                seg.position.z += gameSpeed;
+                if (seg.position.z > 10) seg.position.z -= 200; 
+            });
+
+            if (nextObstacleZ > -180) {
+                spawnObstacle(nextObstacleZ);
+                nextObstacleZ -= Math.max(18, 35 - gameSpeed * 10);
+            }
+            nextObstacleZ += gameSpeed;
+
+            const hitBoxWorld = new THREE.Box3().setFromObject(hitbox); 
+
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                let obs = obstacles[i];
+                obs.mesh.position.z += gameSpeed;
+
+                const testMesh = obs.bounds || obs.mesh;
+                obs.box.setFromObject(testMesh);
+
+                if (hitBoxWorld.intersectsBox(obs.box)) {
+                    if (obs.type === 'jump' && playerGroup.position.y > 0.8) { } 
+                    else if (obs.type === 'slide' && isSliding) { } 
+                    else { triggerGameOver("Tripped on a cyber barrier!"); return; }
+                }
+
+                if (obs.mesh.position.z > 10) { scene.remove(obs.mesh); obstacles.splice(i, 1); }
+            }
+
+            gems.forEach((box, idx) => {
+                box.position.z += gameSpeed;
+                box.rotation.y += 0.05;
+                box.rotation.x += 0.02;
+
+                const boxBounds = new THREE.Box3().setFromObject(box);
+                if (hitBoxWorld.intersectsBox(boxBounds)) {
+                    sfx.playCoin();
+                    scene.remove(box); gems.splice(idx, 1);
+                    gemsCollected++;
+                    document.getElementById('coins-val').innerText = gemsCollected;
+                }
+            });
+
+            if (!elonEncounter && distance >= nextElonDistance) {
+                elonEncounter = createElonMuskNPC();
+                nextElonDistance += 150 + Math.random() * 50; 
+            }
+
+            if (elonEncounter) {
+                elonEncounter.group.position.z += gameSpeed;
+
+                if (elonEncounter.group.position.z > -60 && !elonEncounter.hasTriggered) {
+                    elonEncounter.hasTriggered = true;
+                    sfx.playJavelin();
+
+                    const quotes = [
+                        "⚡ ELON: \"YOUR PRIME SUB IS INVALID HERE!\" ⚡",
+                        "⚡ ELON: \"DOGECOIN ONLY FOR TOLL!\" ⚡",
+                        "⚡ ELON: \"X MARKS THE SPOT. NO PASSING!\" ⚡"
+                    ];
+                    const banner = document.getElementById('elon-banner');
+                    banner.innerText = quotes[Math.floor(Math.random() * quotes.length)];
+                    banner.classList.add('active');
+                    setTimeout(() => banner.classList.remove('active'), 2500);
+                }
+
+                if (elonEncounter.hasTriggered && elonEncounter.javelin.position.x > -3.5) {
+                    elonEncounter.javelin.position.x -= 0.25; 
+                }
+
+                if (elonEncounter.group.position.z > -2 && elonEncounter.group.position.z < 2) {
+                    const isPlayerInDangerZone = currentLane === 1 || currentLane === 0; 
+                    if (isPlayerInDangerZone && playerGroup.position.y < 1.0) {
+                        triggerGameOver("Elon smashed you with the X-Javelin!");
+                        return;
+                    }
+                }
+
+                if (elonEncounter.group.position.z > 15) {
+                    scene.remove(elonEncounter.group);
+                    elonEncounter = null;
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            update();
+        }
+
+        init();
+        animate();
+    </script>
+</body>
+</html>
